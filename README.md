@@ -1,8 +1,10 @@
 # Create: BetterSaw
 
-This addon for Create lets the Mechanical Saw receive recipe orders from the Stock Keeper.
+The Create BetterSaw addon for Create lets the Mechanical Saw receive recipe orders from the Stock Keeper.
 
-## Create More Mods
+**This fork expands on that, adding support for more than saws. The goal is to make every Processing possible.**
+
+## Create More Mods by yision1
 
 - [FluidLogistic](https://github.com/yision1/CreateFluidLogistic)
 - [Phantom](https://github.com/yision1/CreatePhantom)

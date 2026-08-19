@@ -1,8 +1,9 @@
 package com.yision.bettersaw;
 
-import com.yision.bettersaw.content.SawBufferItemHandler;
+import com.yision.bettersaw.content.DeployingUnpackingHandler;
+import com.yision.bettersaw.content.ProcessingBufferItemHandler;
 import com.yision.bettersaw.content.SawBufferManager;
-import com.yision.bettersaw.content.SawUnpackingHandler;
+import com.yision.bettersaw.content.SawingUnpackingHandler;
 
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -14,12 +15,13 @@ public final class CreateBetterSaw {
 
     public CreateBetterSaw(IEventBus modEventBus) {
         BetterSawRegistries.register(modEventBus);
-        modEventBus.addListener(SawBufferItemHandler::registerCapabilities);
+        modEventBus.addListener(ProcessingBufferItemHandler::registerCapabilities);
         SawBufferManager.register();
         modEventBus.addListener(this::commonSetup);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
-        event.enqueueWork(SawUnpackingHandler::register);
+        event.enqueueWork(SawingUnpackingHandler::register);
+        event.enqueueWork(DeployingUnpackingHandler::register);
     }
 }

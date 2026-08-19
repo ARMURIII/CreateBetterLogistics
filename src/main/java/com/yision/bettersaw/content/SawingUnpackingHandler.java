@@ -10,7 +10,7 @@ import com.simibubi.create.api.packager.unpacking.UnpackingHandler;
 import com.simibubi.create.content.kinetics.saw.SawBlock;
 import com.simibubi.create.content.kinetics.saw.SawBlockEntity;
 import com.simibubi.create.content.logistics.stockTicker.PackageOrderWithCrafts;
-import com.yision.bettersaw.logistics.SawOrderContext;
+import com.yision.bettersaw.logistics.ProcessingOrderContext;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -19,7 +19,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
-public enum SawUnpackingHandler implements UnpackingHandler {
+@SuppressWarnings("UnstableApiUsage")
+public enum SawingUnpackingHandler implements UnpackingHandler {
     INSTANCE;
 
     public static void register() {
@@ -42,12 +43,15 @@ public enum SawUnpackingHandler implements UnpackingHandler {
             return false;
         }
 
-        Optional<ResourceLocation> orderedRecipeId = SawOrderContext.decodeRecipeId(orderContext);
+        Optional<ResourceLocation> orderedRecipeId = ProcessingOrderContext.decodeRecipeId(orderContext);
         if (orderedRecipeId.isPresent()) {
-            if (!SawRecipeSelection.canProcess(level, orderedRecipeId.get(), input)
-                    || !SawOrderContext.getOrderedInput(orderContext)
-                        .filter(patternInput -> ItemStack.isSameItemSameComponents(patternInput, input))
-                        .isPresent()) {
+            if
+            (
+               !ProcessingRecipeSelection.canProcess(level, orderedRecipeId.get(), input) ||
+               ProcessingOrderContext.getOrderedInput(orderContext)
+                        .filter(patternInput -> patternInput.is(input.getItem()))
+                        .isEmpty()
+            ) {
                 return false;
             }
         } else if (orderContext != null && !orderContext.orderedCrafts().isEmpty()) {
@@ -61,7 +65,7 @@ public enum SawUnpackingHandler implements UnpackingHandler {
         SawInputBatch batch = SawInputBatch.from(input);
         saw.inventory.setStackInSlot(0, batch.active());
         if (orderedRecipeId.isPresent()
-                && !SawRecipeSelection.applyOrderedFilter(saw, orderedRecipeId.get(), batch.active())) {
+                && !ProcessingRecipeSelection.applyOrderedFilter(saw, orderedRecipeId.get(), batch.active())) {
             saw.inventory.setStackInSlot(0, ItemStack.EMPTY);
             saw.setChanged();
             return false;
@@ -86,7 +90,7 @@ public enum SawUnpackingHandler implements UnpackingHandler {
             }
 
             total += stack.getCount();
-            if (total > SawBuffer.CAPACITY || total > stack.getMaxStackSize()) {
+            if (total > ProcessingBuffer.CAPACITY || total > stack.getMaxStackSize()) {
                 return ItemStack.EMPTY;
             }
             if (combined.isEmpty()) {

@@ -3,7 +3,7 @@ package com.yision.bettersaw;
 import java.util.function.Supplier;
 
 import com.mojang.serialization.MapCodec;
-import com.yision.bettersaw.content.SawBuffer;
+import com.yision.bettersaw.content.ProcessingBuffer;
 import com.yision.bettersaw.content.SawBufferLootModifier;
 
 import net.neoforged.bus.api.IEventBus;
@@ -18,10 +18,10 @@ public final class BetterSawRegistries {
     private static final DeferredRegister<MapCodec<? extends IGlobalLootModifier>> LOOT_MODIFIER_SERIALIZERS =
         DeferredRegister.create(NeoForgeRegistries.GLOBAL_LOOT_MODIFIER_SERIALIZERS, CreateBetterSaw.MOD_ID);
 
-    public static final Supplier<AttachmentType<SawBuffer>> SAW_BUFFER = ATTACHMENT_TYPES.register(
+    public static final Supplier<AttachmentType<ProcessingBuffer>> SAW_BUFFER = ATTACHMENT_TYPES.register(
         "saw_buffer",
-        () -> AttachmentType.builder(SawBuffer::new)
-            .serialize(SawBuffer.CODEC, SawBuffer::hasState)
+        () -> AttachmentType.builder(ProcessingBuffer::new)
+            .serialize(ProcessingBuffer.CODEC, ProcessingBuffer::hasState)
             .build()
     );
 

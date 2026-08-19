@@ -10,23 +10,23 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 
-public final class SawBuffer {
+public final class ProcessingBuffer {
     public static final int CAPACITY = 64;
 
-    public static final Codec<SawBuffer> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-        ItemStack.OPTIONAL_CODEC.fieldOf("remaining").forGetter(SawBuffer::copyRemaining),
-        ResourceLocation.CODEC.optionalFieldOf("recipe_id").forGetter(SawBuffer::recipeId)
-    ).apply(instance, (remaining, recipeId) -> new SawBuffer(remaining, recipeId.orElse(null))));
+    public static final Codec<ProcessingBuffer> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+        ItemStack.OPTIONAL_CODEC.fieldOf("remaining").forGetter(ProcessingBuffer::copyRemaining),
+        ResourceLocation.CODEC.optionalFieldOf("recipe_id").forGetter(ProcessingBuffer::recipeId)
+    ).apply(instance, (remaining, recipeId) -> new ProcessingBuffer(remaining, recipeId.orElse(null))));
 
     private ItemStack remaining;
     @Nullable
     private ResourceLocation recipeId;
 
-    public SawBuffer() {
+    public ProcessingBuffer() {
         this(ItemStack.EMPTY, null);
     }
 
-    private SawBuffer(ItemStack remaining, @Nullable ResourceLocation recipeId) {
+    private ProcessingBuffer(ItemStack remaining, @Nullable ResourceLocation recipeId) {
         this.remaining = remaining.copy();
         this.recipeId = recipeId;
     }
@@ -48,6 +48,7 @@ public final class SawBuffer {
         this.recipeId = recipeId;
     }
 
+    @SuppressWarnings("UnusedReturnValue")
     public ItemStack takeOne() {
         return extract(1, false);
     }

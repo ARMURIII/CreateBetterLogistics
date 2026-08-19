@@ -13,13 +13,14 @@ import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.items.IItemHandler;
 
-public final class SawBufferItemHandler implements IItemHandler {
+@SuppressWarnings("ALL")
+public final class ProcessingBufferItemHandler implements IItemHandler {
     @Nullable
     private final IItemHandler processingInventory;
     private final Supplier<ItemStack> bufferedStack;
     private final BufferExtractor bufferExtractor;
 
-    SawBufferItemHandler(
+    ProcessingBufferItemHandler(
             @Nullable IItemHandler processingInventory,
             Supplier<ItemStack> bufferedStack,
             BufferExtractor bufferExtractor) {
@@ -32,11 +33,11 @@ public final class SawBufferItemHandler implements IItemHandler {
         event.registerBlockEntity(
             Capabilities.ItemHandler.BLOCK,
             AllBlockEntityTypes.SAW.get(),
-            SawBufferItemHandler::forSaw
+            ProcessingBufferItemHandler::forSaw
         );
     }
 
-    static SawBufferItemHandler forSaw(SawBlockEntity saw, @Nullable Direction side) {
+    static ProcessingBufferItemHandler forSaw(SawBlockEntity saw, @Nullable Direction side) {
         return forSide(
             saw.inventory,
             side,
@@ -45,12 +46,12 @@ public final class SawBufferItemHandler implements IItemHandler {
         );
     }
 
-    static SawBufferItemHandler forSide(
+    static ProcessingBufferItemHandler forSide(
             IItemHandler processingInventory,
             @Nullable Direction side,
             Supplier<ItemStack> bufferedStack,
             BufferExtractor bufferExtractor) {
-        return new SawBufferItemHandler(
+        return new ProcessingBufferItemHandler(
             side == Direction.DOWN ? null : processingInventory,
             bufferedStack,
             bufferExtractor
@@ -93,7 +94,7 @@ public final class SawBufferItemHandler implements IItemHandler {
     public int getSlotLimit(int slot) {
         validateSlot(slot);
         if (slot == bufferSlot()) {
-            return SawBuffer.CAPACITY;
+            return ProcessingBuffer.CAPACITY;
         }
         return processingInventory.getSlotLimit(slot);
     }

@@ -6,6 +6,9 @@ import java.util.Map;
 import java.util.Optional;
 
 import com.simibubi.create.AllRecipeTypes;
+import com.simibubi.create.content.kinetics.deployer.DeployerApplicationRecipe;
+import com.simibubi.create.content.kinetics.deployer.ItemApplicationRecipe;
+import com.simibubi.create.content.kinetics.deployer.ManualApplicationRecipe;
 import com.simibubi.create.content.kinetics.saw.CuttingRecipe;
 import com.simibubi.create.content.kinetics.saw.SawBlockEntity;
 import com.simibubi.create.foundation.blockEntity.behaviour.filtering.FilteringBehaviour;
@@ -26,34 +29,49 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RecipesUpdatedEvent;
 
-public final class SawRecipeSelection {
+public final class ProcessingRecipeSelection {
     private static RecipeManager indexedRecipeManager;
     private static Map<Recipe<?>, ResourceLocation> recipeIds = Map.of();
 
-    private SawRecipeSelection() {
+    private ProcessingRecipeSelection() {
     }
 
     public static Optional<ResourceLocation> findSupportedRecipeId(Level level, Recipe<?> recipe) {
         RecipeManager recipeManager = level.getRecipeManager();
-        if (recipeManager != indexedRecipeManager) {
-            return Optional.empty();
-        }
+        if (recipeManager != indexedRecipeManager)
+            refreshRecipeIds(recipeManager);
 
         ResourceLocation recipeId = recipeIds.get(recipe);
-        if (recipeId == null) {
-            return Optional.empty();
+        for (Map.Entry<Recipe<?>, ResourceLocation> entry : recipeIds.entrySet()) {
+            if (isSimilar(entry.getKey(),recipe)) {
+                recipeId = entry.getValue();
+                break;
+            }
         }
 
+        if (recipeId == null)
+            return Optional.empty();
+
         return recipeManager.byKey(recipeId)
-            .filter(holder -> holder.value() == recipe)
-            .filter(SawRecipeSelection::isSupported)
+            .filter(holder -> isSimilar(holder.value(),recipe))
+            .filter(ProcessingRecipeSelection::isSupported)
             .map(RecipeHolder::id);
+    }
+
+    static boolean isSimilar(Recipe<?> r1, Recipe<?> r2) {
+        if (r2 instanceof DeployerApplicationRecipe dar && r1 instanceof ManualApplicationRecipe mar) {
+            return
+                    mar.getIngredients().get(0).equals(dar.getIngredients().get(0)) &&
+                    mar.getIngredients().get(1).equals(dar.getIngredients().get(1));
+        }
+        return r1.equals(r2);
     }
 
     static boolean canProcess(Level level, ResourceLocation recipeId, ItemStack input) {
         return resolve(level, recipeId, input).isPresent();
     }
 
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     static boolean applyOrderedFilter(SawBlockEntity saw, ResourceLocation recipeId, ItemStack input) {
         Level level = saw.getLevel();
         if (level == null) {
@@ -73,7 +91,8 @@ public final class SawRecipeSelection {
         return filtering.setFilter(orderedFilter);
     }
 
-    private static Optional<ResolvedRecipe> resolve(Level level, ResourceLocation recipeId, ItemStack input) {
+    @SuppressWarnings("ClassEscapesDefinedScope")
+    public static Optional<ResolvedRecipe> resolve(Level level, ResourceLocation recipeId, ItemStack input) {
         Optional<? extends RecipeHolder<?>> holder = level.getRecipeManager().byKey(recipeId);
         if (holder.isEmpty() || !isSupported(holder.get())) {
             return Optional.empty();
@@ -100,6 +119,9 @@ public final class SawRecipeSelection {
         if (recipe instanceof CuttingRecipe) {
             return recipe.getType() == AllRecipeTypes.CUTTING.getType();
         }
+        if (recipe instanceof ItemApplicationRecipe) {
+            return recipe.getType() == AllRecipeTypes.DEPLOYING.getType() || recipe.getType() == AllRecipeTypes.ITEM_APPLICATION.getType();
+        }
         return recipe instanceof StonecutterRecipe
             && AllConfigs.server().recipes.allowStonecuttingOnSaw.get();
     }
@@ -107,6 +129,12 @@ public final class SawRecipeSelection {
     private static void refreshRecipeIds(RecipeManager recipeManager) {
         IdentityHashMap<Recipe<?>, ResourceLocation> refreshed = new IdentityHashMap<>();
         for (RecipeHolder<?> holder : recipeManager.getAllRecipesFor(AllRecipeTypes.CUTTING.getType())) {
+            refreshed.put(holder.value(), holder.id());
+        }
+        for (RecipeHolder<?> holder : recipeManager.getAllRecipesFor(AllRecipeTypes.DEPLOYING.getType())) {
+            refreshed.put(holder.value(), holder.id());
+        }
+        for (RecipeHolder<?> holder : recipeManager.getAllRecipesFor(AllRecipeTypes.ITEM_APPLICATION.getType())) {
             refreshed.put(holder.value(), holder.id());
         }
         for (RecipeHolder<?> holder : recipeManager.getAllRecipesFor(RecipeType.STONECUTTING)) {

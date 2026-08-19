@@ -62,12 +62,12 @@ public final class SawBufferManager {
 
     static ItemStack copyBufferedInput(SawBlockEntity saw) {
         return saw.getExistingData(BetterSawRegistries.SAW_BUFFER)
-            .map(SawBuffer::copyRemaining)
+            .map(ProcessingBuffer::copyRemaining)
             .orElse(ItemStack.EMPTY);
     }
 
     static ItemStack extractBufferedInput(SawBlockEntity saw, int amount, boolean simulate) {
-        SawBuffer buffer = saw.getExistingData(BetterSawRegistries.SAW_BUFFER).orElse(null);
+        ProcessingBuffer buffer = saw.getExistingData(BetterSawRegistries.SAW_BUFFER).orElse(null);
         if (buffer == null) {
             return ItemStack.EMPTY;
         }
@@ -104,13 +104,13 @@ public final class SawBufferManager {
             }
 
             Optional<ResourceLocation> recipeId = saw.getExistingData(BetterSawRegistries.SAW_BUFFER)
-                .flatMap(SawBuffer::recipeId);
+                .flatMap(ProcessingBuffer::recipeId);
             if (recipeId.isEmpty()) {
                 continue;
             }
 
             ItemStack activeInput = saw.inventory.getStackInSlot(0);
-            if (!SawRecipeSelection.applyOrderedFilter(saw, recipeId.get(), activeInput)) {
+            if (!ProcessingRecipeSelection.applyOrderedFilter(saw, recipeId.get(), activeInput)) {
                 saw.inventory.remainingTime = Math.max(saw.inventory.remainingTime, LOCK_RETRY_TIME);
                 saw.inventory.recipeDuration = Math.max(saw.inventory.recipeDuration, LOCK_RETRY_TIME);
                 saw.setChanged();
@@ -140,7 +140,7 @@ public final class SawBufferManager {
                 continue;
             }
 
-            SawBuffer buffer = saw.getExistingData(BetterSawRegistries.SAW_BUFFER).orElse(null);
+            ProcessingBuffer buffer = saw.getExistingData(BetterSawRegistries.SAW_BUFFER).orElse(null);
             if (buffer == null || !buffer.hasState()) {
                 clearAttachment(saw);
                 iterator.remove();
@@ -165,7 +165,7 @@ public final class SawBufferManager {
             Optional<ResourceLocation> recipeId = buffer.recipeId();
             saw.inventory.setStackInSlot(0, next);
             if (recipeId.isPresent()
-                    && !SawRecipeSelection.applyOrderedFilter(saw, recipeId.get(), next)) {
+                    && !ProcessingRecipeSelection.applyOrderedFilter(saw, recipeId.get(), next)) {
                 saw.inventory.setStackInSlot(0, ItemStack.EMPTY);
                 saw.setChanged();
                 continue;
@@ -250,7 +250,7 @@ public final class SawBufferManager {
 
     private static boolean hasBatchState(SawBlockEntity saw) {
         return saw.getExistingData(BetterSawRegistries.SAW_BUFFER)
-            .filter(SawBuffer::hasState)
+            .filter(ProcessingBuffer::hasState)
             .isPresent();
     }
 }

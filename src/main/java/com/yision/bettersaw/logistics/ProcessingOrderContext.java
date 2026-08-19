@@ -5,38 +5,38 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import com.simibubi.create.AllRecipeTypes;
+import com.simibubi.create.content.kinetics.deployer.ItemApplicationRecipe;
 import com.simibubi.create.content.logistics.BigItemStack;
 import com.simibubi.create.content.logistics.stockTicker.CraftableBigItemStack;
 import com.simibubi.create.content.logistics.stockTicker.PackageOrder;
 import com.simibubi.create.content.logistics.stockTicker.PackageOrderWithCrafts;
 import com.simibubi.create.content.logistics.stockTicker.PackageOrderWithCrafts.CraftingEntry;
-import com.yision.bettersaw.content.SawRecipeSelection;
+import com.yision.bettersaw.content.ProcessingRecipeSelection;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 
-public final class SawOrderContext {
+public final class ProcessingOrderContext {
     private static final int MAGIC = 0x42534157;
     private static final int VERSION = 1;
     private static final int MAX_RECIPE_ID_BYTES = 256;
 
-    private SawOrderContext() {
+    private ProcessingOrderContext() {
     }
 
-    public static PackageOrderWithCrafts encodeSelectedSawRecipe(PackageOrderWithCrafts original,
-            List<CraftableBigItemStack> recipesToOrder, Level level) {
-        if (!original.orderedCrafts().isEmpty() || recipesToOrder.size() != 1) {
+    public static PackageOrderWithCrafts encodeSelectedRecipe(PackageOrderWithCrafts original,
+                                                              List<CraftableBigItemStack> recipesToOrder, Level level) {
+        if (recipesToOrder.size() != 1) {
             return original;
         }
 
         CraftableBigItemStack craftable = recipesToOrder.getFirst();
         Recipe<?> recipe = craftable.recipe;
-        if (recipe.getIngredients().size() != 1) {
-            return original;
-        }
 
         ItemStack result = recipe.getResultItem(level.registryAccess());
         int outputCount = result.getCount();
@@ -45,22 +45,22 @@ public final class SawOrderContext {
         }
 
         int craftCount = craftable.count / outputCount;
-        if (original.stacks().size() != 1) {
+        if (original.stacks().size() != 1 && (recipe.getType() == AllRecipeTypes.CUTTING.getType() || recipe.getType() == RecipeType.STONECUTTING)) {
             return original;
         }
 
         BigItemStack orderedInput = original.stacks().getFirst();
-        Ingredient ingredient = recipe.getIngredients().getFirst();
-        if (orderedInput.count != craftCount || orderedInput.stack.isEmpty() || !ingredient.test(orderedInput.stack)) {
+        if (
+                orderedInput.count != craftCount ||
+                orderedInput.stack.isEmpty() ||
+                recipe.getIngredients().stream().noneMatch(ingr -> ingr.test(orderedInput.stack))
+        ) {
             return original;
         }
 
-        Optional<ResourceLocation> recipeId = SawRecipeSelection.findSupportedRecipeId(level, recipe);
-        if (recipeId.isEmpty()) {
-            return original;
-        }
+        Optional<ResourceLocation> recipeId = ProcessingRecipeSelection.findSupportedRecipeId(level, recipe);
+        return recipeId.map(resourceLocation -> attachRecipeId(original, resourceLocation, recipe, original.stacks())).orElse(original);
 
-        return attachRecipeId(original, recipeId.get());
     }
 
     public static Optional<ResourceLocation> decodeRecipeId(PackageOrderWithCrafts context) {
@@ -130,24 +130,27 @@ public final class SawOrderContext {
         return input.isEmpty() ? Optional.empty() : Optional.of(input);
     }
 
-    static PackageOrderWithCrafts attachRecipeId(PackageOrderWithCrafts original, ResourceLocation recipeId) {
-        if (!original.orderedCrafts().isEmpty() || original.orderedStacks().stacks().size() != 1) {
-            return original;
+    static PackageOrderWithCrafts attachRecipeId(PackageOrderWithCrafts original, ResourceLocation recipeId, Recipe<?> recipe, List<BigItemStack> stacks) {
+        if (!original.orderedCrafts().isEmpty()) {
+            if (original.orderedCrafts().getFirst().pattern().stacks().stream().noneMatch(stack -> stack.stack.has(DataComponents.CUSTOM_DATA)))
+                return original;
         }
 
         BigItemStack orderedInput = original.orderedStacks().stacks().getFirst();
-        if (orderedInput.stack.isEmpty() || orderedInput.count <= 0) {
+        if (recipe instanceof ItemApplicationRecipe iap)
+            orderedInput = stacks.stream().filter(bis -> iap.getRequiredHeldItem().test(bis.stack)).toList().getFirst();
+
+        if (orderedInput.stack.isEmpty() || orderedInput.count <= 0)
             return original;
-        }
 
         List<BigItemStack> pattern = new ArrayList<>();
-        pattern.add(new BigItemStack(orderedInput.stack.copyWithCount(1), 1));
+        pattern.add(orderedInput);
         appendRecipeId(pattern, recipeId);
         CraftingEntry craftingEntry = new CraftingEntry(new PackageOrder(pattern), orderedInput.count);
         return new PackageOrderWithCrafts(original.orderedStacks(), List.of(craftingEntry));
     }
 
-    static void appendRecipeId(List<BigItemStack> pattern, ResourceLocation recipeId) {
+    public static void appendRecipeId(List<BigItemStack> pattern, ResourceLocation recipeId) {
         byte[] bytes = recipeId.toString().getBytes(StandardCharsets.UTF_8);
         if (bytes.length == 0 || bytes.length > MAX_RECIPE_ID_BYTES) {
             throw new IllegalArgumentException("Recipe id is too long to encode: " + recipeId);
@@ -161,6 +164,7 @@ public final class SawOrderContext {
         }
     }
 
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     private static boolean isEmptyMetadata(BigItemStack entry, int value) {
         return entry.stack.isEmpty() && entry.count == value;
     }

@@ -2,8 +2,15 @@
   "required": true,
   "package": "com.yision.bettersaw.mixin",
   "compatibilityLevel": "JAVA_21",
-  "mixins": [],
+  "mixins": [
+    "FactoryPanelBehaviourMixin",
+    "FrogportBlockEntityMixin",
+    "FunnelBlockEntityMixin",
+    "PackagerBlockEntityMixin",
+    "accessor.ItemStackAccessor"
+  ],
   "client": [
+    "client.FactoryGaugeScreenMixin",
     "client.StockKeeperRequestScreenMixin"
   ],
   "injectors": {
